@@ -3,7 +3,7 @@ For those scarce few interested in the continuation of WoD emulation development
 * Pathfinding and movement generators - must be updated to support smooth pathing.
 * Areatrigger - outdated, should be updated to the system used in Legion cores.
 * Scene system - partially missing. I'd rework it.
-* Pet Battles - not working at all, luckily, it can easily be cherry picked from Trinitycore's commit history and so on...
+* Pet Battles - need some correct 
 * Phasing - phasing has yet to be reworked and updated, the old standard phasemask system is the one used in this core (Most current system is PhaseID and PhaseGroup).These cores will always work on the old system, so it's nonsense to update to the latest TC systems, since everything that works here will break.
 * Low level content - in a sufficient state but the 'unpopular' zones are not blizzlike. I have fixed a lot of the low level zones up to a very close blizzlike standard.
 * Database NPCs and duplicates. - Some NPCs have an incorrect blizzlike coordinates and/or duplicates. To the best of my knowledge, at least 95% of the NPCs in the database are blizzlike as per the sniffs that were used back from 6.1-6.2.3. The only missing NPCs are ought to be the Tanaan Jungle and HellFire Citadel ones.
