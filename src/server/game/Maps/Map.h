@@ -37,11 +37,12 @@ class CreatureGroup;
 struct ScriptInfo;
 struct ScriptAction;
 struct Position;
+struct WildBattlePetPool;
 class Battleground;
 class MapInstanced;
 class InstanceMap;
 class Transport;
-namespace JadeCore { struct ObjectUpdater; }
+namespace Trinity { struct ObjectUpdater; }
 
 struct ScriptAction
 {
@@ -112,7 +113,7 @@ struct map_liquidHeader
     float  liquidLevel;
 };
 
-enum ZLiquidStatus
+enum ZLiquidStatus : uint32
 {
     LIQUID_MAP_NO_WATER     = 0x00000000,
     LIQUID_MAP_ABOVE_WATER  = 0x00000001,
@@ -270,7 +271,7 @@ class Map : public GridRefManager<NGridType>
         bool IsUpdating() const { return m_IsUpdating; }
 
 #endif /* CROSS */
-        void VisitNearbyCellsOf(WorldObject* obj, TypeContainerVisitor<JadeCore::ObjectUpdater, GridTypeMapContainer> &gridVisitor, TypeContainerVisitor<JadeCore::ObjectUpdater, WorldTypeMapContainer> &worldVisitor);
+        void VisitNearbyCellsOf(WorldObject* obj, TypeContainerVisitor<Trinity::ObjectUpdater, GridTypeMapContainer> &gridVisitor, TypeContainerVisitor<Trinity::ObjectUpdater, WorldTypeMapContainer> &worldVisitor);
         virtual void Update(const uint32);
 
         float GetVisibilityRange() const
@@ -298,13 +299,13 @@ class Map : public GridRefManager<NGridType>
 
         bool IsRemovalGrid(float x, float y) const
         {
-            GridCoord p = JadeCore::ComputeGridCoord(x, y);
+            GridCoord p = Trinity::ComputeGridCoord(x, y);
             return !getNGrid(p.x_coord, p.y_coord) || getNGrid(p.x_coord, p.y_coord)->GetGridState() == GRID_STATE_REMOVAL;
         }
 
         bool IsGridLoaded(float x, float y) const
         {
-            return IsGridLoaded(JadeCore::ComputeGridCoord(x, y));
+            return IsGridLoaded(Trinity::ComputeGridCoord(x, y));
         }
 
         bool GetUnloadLock(const GridCoord &p) const { return getNGrid(p.x_coord, p.y_coord)->getUnloadLock(); }
@@ -538,6 +539,10 @@ class Map : public GridRefManager<NGridType>
         bool CollideWithScriptedGameObject(float p_X, float p_Y, float p_Z, float* p_OutZ = nullptr) const;
 		GridMap* GetGrid(float x, float y);
 
+        void AddBattlePet(Creature* creature);
+        void RemoveBattlePet(Creature* creature);
+        WildBattlePetPool* GetWildBattlePetPool(Creature* creature);
+
     private:
         void LoadMapAndVMap(int gx, int gy);
         void LoadVMap(int gx, int gy);
@@ -576,6 +581,10 @@ class Map : public GridRefManager<NGridType>
 
         void setNGrid(NGridType* grid, uint32 x, uint32 y);
         void ScriptsProcess();
+
+        void PopulateBattlePet(uint32 diff);
+        void DepopulateBattlePet();
+        std::map<uint16, std::map<uint32, WildBattlePetPool>> m_wildBattlePetPool;
 
     protected:
 
@@ -759,7 +768,7 @@ inline void Map::Visit(Cell const& cell, TypeContainerVisitor<T, CONTAINER>& vis
 template<class NOTIFIER>
 inline void Map::VisitAll(float const& x, float const& y, float radius, NOTIFIER& notifier, bool loadGrids)
 {
-    CellCoord p(JadeCore::ComputeCellCoord(x, y));
+    CellCoord p(Trinity::ComputeCellCoord(x, y));
     Cell cell(p);
     if (!loadGrids)
         cell.SetNoCreate();
@@ -774,7 +783,7 @@ inline void Map::VisitAll(float const& x, float const& y, float radius, NOTIFIER
 template<class NOTIFIER>
 inline void Map::VisitFirstFound(const float &x, const float &y, float radius, NOTIFIER &notifier, bool loadGrids)
 {
-    CellCoord p(JadeCore::ComputeCellCoord(x, y));
+    CellCoord p(Trinity::ComputeCellCoord(x, y));
     Cell cell(p);
     if (!loadGrids)
         cell.SetNoCreate();
@@ -791,7 +800,7 @@ inline void Map::VisitFirstFound(const float &x, const float &y, float radius, N
 template<class NOTIFIER>
 inline void Map::VisitWorld(const float &x, const float &y, float radius, NOTIFIER &notifier, bool loadGrids)
 {
-    CellCoord p(JadeCore::ComputeCellCoord(x, y));
+    CellCoord p(Trinity::ComputeCellCoord(x, y));
     Cell cell(p);
     if (!loadGrids)
         cell.SetNoCreate();
@@ -803,7 +812,7 @@ inline void Map::VisitWorld(const float &x, const float &y, float radius, NOTIFI
 template<class NOTIFIER>
 inline void Map::VisitGrid(const float &x, const float &y, float radius, NOTIFIER &notifier, bool loadGrids)
 {
-    CellCoord p(JadeCore::ComputeCellCoord(x, y));
+    CellCoord p(Trinity::ComputeCellCoord(x, y));
     Cell cell(p);
     if (!loadGrids)
         cell.SetNoCreate();

@@ -156,6 +156,7 @@ class Object
         virtual ~Object();
 
         bool IsInWorld() const { return m_inWorld; }
+        bool IsPreDelete() const;
 
         virtual void AddToWorld();
         virtual void RemoveFromWorld();
@@ -441,6 +442,7 @@ class Object
 
         bool m_objectUpdated;
 
+        std::atomic<bool> m_preDelete;
         std::vector<uint32>* _dynamicValues;
         uint32 _dynamicValuesCount;
         UpdateMask _changesMask;
@@ -922,6 +924,8 @@ class WorldObject : public Object, public WorldLocation
         bool InSamePhase(WorldObject const* obj) const { return InSamePhase(obj->GetPhaseMask()); }
         bool InSamePhase(uint32 phasemask) const { return (GetPhaseMask() & phasemask); }
 
+        bool IsInPhase(uint32 phase) const { return _phases.find(phase) != _phases.end(); }
+
         virtual uint32 GetZoneId(bool forceRecalc = false) const;
         virtual uint32 GetAreaId(bool forceRecalc = false) const;
         virtual void GetZoneAndAreaId(uint32& zoneid, uint32& areaid, bool forceRecalc = false) const;
@@ -933,6 +937,9 @@ class WorldObject : public Object, public WorldLocation
         void SetName(const std::string& newname) { m_name=newname; }
 
         virtual const char* GetNameForLocaleIdx(LocaleConstant /*locale_idx*/) const { return GetName(); }
+
+        uint32 m_zoneId;
+        uint32 GetCurrentZoneID() const { return m_zoneId; }
 
         float GetDistance(const WorldObject* obj) const
         {
@@ -1204,6 +1211,7 @@ class WorldObject : public Object, public WorldLocation
         //uint32 m_mapId;                                     // object at map with map_id
         uint32 m_InstanceId;                                // in map copy with instance id
         uint32 m_phaseMask;                                 // in area phase state
+        std::set<uint32> _phases;
 
         std::list<uint64/* guid*/> _visibilityPlayerList;
 
@@ -1220,7 +1228,7 @@ class WorldObject : public Object, public WorldLocation
         uint16 m_MeleeAnimKitId;
 };
 
-namespace JadeCore
+namespace Trinity
 {
     template<class T>
     void RandomResizeList(std::list<T> &_list, uint32 _size)

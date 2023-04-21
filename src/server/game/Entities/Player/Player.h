@@ -1461,6 +1461,8 @@ struct CompletedChallenge
 /// MapID
 typedef std::map<uint32, CompletedChallenge> CompletedChallengesMap;
 
+typedef std::map<ObjectGuid, std::shared_ptr<BattlePet>> BattlePetMap;
+
 enum BattlegroundTimerTypes
 {
     PVP_TIMER,
@@ -2096,6 +2098,10 @@ class Player : public Unit, public GridObject<Player>
         void AddTimedQuest(uint32 quest_id) { m_timedquests.insert(quest_id); }
         void RemoveTimedQuest(uint32 quest_id) { m_timedquests.erase(quest_id); }
 
+        void SendMusic(uint32 musicId, uint64 source);
+        void SendSound(uint32 soundId, uint64 source);
+        void SendSoundToAll(uint32 soundId, uint64 source);
+
         /*********************************************************/
         /***                   LOAD SYSTEM                     ***/
         /*********************************************************/
@@ -2551,7 +2557,7 @@ class Player : public Unit, public GridObject<Player>
             if (p_Value > 3500)
             {
                 ACE_Stack_Trace trace;
-                sLog->outError(LOG_FILTER_GENERAL, "Suspiciously high personal rating. Rating: %u, Slot: %u, Player: %u, Trace log: %s", p_Value, p_Slot, GUID_LOPART(GetGUID()), trace.c_str());
+                TC_LOG_ERROR("server.worldserver", "Suspiciously high personal rating. Rating: %u, Slot: %u, Player: %u, Trace log: %s", p_Value, p_Slot, GUID_LOPART(GetGUID()), trace.c_str());
             }
 
             UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_HIGHEST_PERSONAL_RATING, p_Value, Arena::GetTypeBySlot(p_Slot));
@@ -2571,7 +2577,7 @@ class Player : public Unit, public GridObject<Player>
             if (value > 3500)
             {
                 ACE_Stack_Trace trace;
-                sLog->outError(LOG_FILTER_GENERAL, "Suspiciously high match maker rating. Rating: %u, Slot: %u, Player: %u, Trace log: %s", value, slot, GUID_LOPART(GetGUID()), trace.c_str());
+                TC_LOG_ERROR("server.worldserver", "Suspiciously high match maker rating. Rating: %u, Slot: %u, Player: %u, Trace log: %s", value, slot, GUID_LOPART(GetGUID()), trace.c_str());
             }
 
             m_ArenaMatchMakerRating[slot] = value;
@@ -3391,6 +3397,7 @@ class Player : public Unit, public GridObject<Player>
         AchievementMgr<Player> const& GetAchievementMgr() const { return m_achievementMgr; }
         void UpdateAchievementCriteria(AchievementCriteriaTypes type, uint64 miscValue1 = 0, uint64 miscValue2 = 0, uint64 miscValue3 = 0, Unit* unit = NULL, bool p_LoginCheck = false);
         void CompletedAchievement(AchievementEntry const* entry);
+        bool HasAchieved(uint32 achievementId) const;
 
         bool HasTitle(uint32 bitIndex);
         bool HasTitle(CharTitlesEntry const* title) { return HasTitle(title->MaskID); }
@@ -3513,19 +3520,19 @@ class Player : public Unit, public GridObject<Player>
         bool HasBattlePetTraining();
         /// Get battle pet trap level
         uint32 GetBattlePetTrapLevel();
+        void SaveBattlePets(SQLTransaction& trans);
         /// Compute the unlocked pet battle slot
         uint32 GetUnlockedPetBattleSlot();
         /// Summon current pet if any active
         void UnsummonCurrentBattlePetIfAny(bool p_Unvolontary);
         /// Summon new pet
-        void SummonBattlePet(uint64 p_JournalID);
+        void SummonBattlePet(ObjectGuid journalID);
         /// Get current summoned battle pet
         Creature* GetSummonedBattlePet();
         /// Summon last summoned battle pet
         void SummonLastSummonedBattlePet();
+        BattlePetMap* GetBattlePets();
 
-        /// Get pet battles
-        std::vector<std::shared_ptr<BattlePet>> GetBattlePets();
         /// Get pet battles
         std::shared_ptr<BattlePet> GetBattlePet(uint64 p_JournalID);
         /// Get pet battle combat team
@@ -3539,6 +3546,7 @@ class Player : public Unit, public GridObject<Player>
         void PetBattleCountBattleSpecies();
         /// Update battle pet combat team
         void UpdateBattlePetCombatTeam();
+        BattlePetMap _battlePets;
 
         //////////////////////////////////////////////////////////////////////////
         /// ToyBox
@@ -3758,6 +3766,8 @@ class Player : public Unit, public GridObject<Player>
 
         uint32 GetBagsFreeSlots() const;
 
+        bool AddBattlePet(uint32 spellID, uint16 flags = 0, bool sendUpdate = true);
+
         bool IsSummoned() const { return m_Summoned; }
         void FinishSummon() { m_Summoned = false; }
         void BeginSummon() { m_Summoned = true; }
@@ -3823,8 +3833,8 @@ class Player : public Unit, public GridObject<Player>
         uint32 m_LastSummonedBattlePet;
 
         std::vector<std::shared_ptr<BattlePet>> m_BattlePets;
-        std::shared_ptr<BattlePet> m_BattlePetCombatTeam[3];
-        std::vector<std::pair<uint32, uint32>> m_OldPetBattleSpellToMerge;
+        std::shared_ptr<BattlePet> _battlePetCombatTeam[3];
+        std::vector<std::pair<uint32, uint32>> _oldPetBattleSpellToMerge;
 
         PreparedQueryResultFuture _petBattleJournalCallback;
 

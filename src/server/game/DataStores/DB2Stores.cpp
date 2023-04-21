@@ -189,8 +189,11 @@ TaxiPathNodesByPath                       sTaxiPathNodesByPath;
 std::set<ResearchSiteEntry const*>        sResearchSiteSet;
 std::set<ResearchProjectEntry const*>     sResearchProjectSet;
 
+typedef std::vector<BattlePetSpeciesEntry const*> CreatureToSpeciesContainer;
+
 SpellTotemMap       sSpellTotemMap;
 MountCapabilitiesMap sMountCapabilitiesMap;
+CreatureToSpeciesContainer _creatureToSpeciesContainer;
 std::map<uint32, std::vector<uint32>> sItemEffectsByItemID;
 std::map<uint32, std::vector<ItemBonusEntry const*>> sItemBonusesByID;
 std::map<uint32, std::vector<ItemXBonusTreeEntry const*>> sItemBonusTreeByID;
@@ -201,12 +204,11 @@ std::map<uint32, uint32> g_PvPItemStoreLevels;
 AreaGroupMemebersByID sAreaGroupMemebersByIDStore;
 
 typedef std::list<std::string> StoreProblemList1;
-
 uint32 DB2FilesCount = 0;
 
 static bool LoadDB2_assert_print(uint32 fsize,uint32 rsize, const std::string& filename)
 {
-    sLog->outError(LOG_FILTER_GENERAL, "Size of '%s' setted by format string (%u) not equal size of C++ structure (%u).", filename.c_str(), fsize, rsize);
+    TC_LOG_ERROR("server.worldserver", "Size of '%s' setted by format string (%u) not equal size of C++ structure (%u).", filename.c_str(), fsize, rsize);
 
     // ASSERT must fail after function call
     return false;
@@ -243,10 +245,10 @@ inline void LoadDB2(StoreProblemList1& errlist, DB2Storage<T>& storage, const st
     if (!storage.Load(db2_filename.c_str(), sql, sWorld->GetDefaultDbcLocale()))
     {
         // sort problematic db2 to (1) non compatible and (2) nonexistent
-        if (FILE * f = fopen(db2_filename.c_str(), "rb"))
+        if (FILE* f = fopen(db2_filename.c_str(), "rb"))
         {
             char buf[100];
-            snprintf(buf, 100,"(exist, but have %u fields instead " SIZEFMTD ") Wrong client version DBC file?", storage.GetFieldCount(), strlen(storage.GetFormat()));
+            snprintf(buf, 100,"(exist, but have %u fields instead %zu) Wrong client version DBC file?", storage.GetFieldCount(), strlen(storage.GetFormat()));
             errlist.push_back(db2_filename + buf);
             fclose(f);
         }
@@ -783,7 +785,7 @@ void LoadDB2Stores(const std::string& dataPath)
     /// error checks
     if (bad_db2_files.size() >= DB2FilesCount)
     {
-        sLog->outError(LOG_FILTER_GENERAL, "\nIncorrect DataDir value in worldserver.conf or ALL required *.db2 files (%d) not found by path: %sdb2", DB2FilesCount, dataPath.c_str());
+        TC_LOG_ERROR("server.worldserver", "\nIncorrect DataDir value in worldserver.conf or ALL required *.db2 files (%d) not found by path: %sdb2", DB2FilesCount, dataPath.c_str());
         exit(1);
     }
     else if (!bad_db2_files.empty())
@@ -792,7 +794,7 @@ void LoadDB2Stores(const std::string& dataPath)
         for (std::list<std::string>::iterator i = bad_db2_files.begin(); i != bad_db2_files.end(); ++i)
             str += *i + "\n";
 
-        sLog->outError(LOG_FILTER_GENERAL, "\nSome required *.db2 files (%u from %d) not found or not compatible:\n%s", (uint32)bad_db2_files.size(), DB2FilesCount,str.c_str());
+        TC_LOG_ERROR("server.worldserver", "\nSome required *.db2 files (%u from %d) not found or not compatible:\n%s", (uint32)bad_db2_files.size(), DB2FilesCount,str.c_str());
         exit(1);
     }
 
@@ -800,10 +802,10 @@ void LoadDB2Stores(const std::string& dataPath)
     if (!sItemStore.LookupEntry(128706) ||              ///< Last item added in 6.2.0 (20216)
         !sItemExtendedCostStore.LookupEntry(5923) )     ///< Last item extended cost added in 6.2.0 (20216)
     {
-        sLog->outError(LOG_FILTER_GENERAL, "Please extract correct db2 files from client 6.2.0 (20216)");
+        TC_LOG_ERROR("server.worldserver", "Please extract correct db2 files from client 6.2.0 (20216)");
         exit(1);
     }
-    sLog->outInfo(LOG_FILTER_GENERAL, ">> Initialized %d DB2 data stores.", DB2FilesCount);
+    TC_LOG_INFO("misc", ">> Initialized %d DB2 data stores.", DB2FilesCount);
 }
 
 std::vector<ItemBonusEntry const*> const* GetItemBonusesByID(uint32 Id)
@@ -876,4 +878,12 @@ std::vector<SpellProcsPerMinuteModEntry const*> GetSpellProcsPerMinuteMods(uint3
         return itr->second;
 
     return std::vector<SpellProcsPerMinuteModEntry const*>();
+}
+
+std::vector<uint32>GetSpeciesByCreatureID(uint32 CreatureID)
+{
+    if (CreatureID >= _creatureToSpeciesContainer.size())
+        return std::vector<uint32>();
+
+    return std::vector<uint32>();
 }
